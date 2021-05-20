@@ -89,6 +89,9 @@ static void printhelp(void)
 /* rnx2rtkp main -------------------------------------------------------------*/
 int main(int argc, char **argv)
 {
+    traceopen("rnx2rtkp.trace");
+
+    tracelevel(5);
     prcopt_t prcopt=prcopt_default;
     solopt_t solopt=solopt_default;
     filopt_t filopt={""};
@@ -165,5 +168,7 @@ int main(int argc, char **argv)
     ret=postpos(ts,te,tint,0.0,&prcopt,&solopt,&filopt,infile,n,outfile,"","");
     
     if (!ret) fprintf(stderr,"%40s\r","");
+
+    traceclose();
     return ret;
 }
