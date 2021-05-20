@@ -954,18 +954,34 @@ extern int readsolstat(char *files[], int nfile, solstatbuf_t *statbuf)
 }
 /* output solution as the form of x/y/z-ecef ---------------------------------*/
 static int outecef(unsigned char *buff, const char *s, const sol_t *sol,
-                   const solopt_t *opt)
+                   const double *rb, const solopt_t *opt)
 {
     const char *sep=opt2sep(opt);
     char *p=(char *)buff;
     
+    int i;
+    double err3d = 0, dd;
+    for (i = 0; i < 3; i++)
+    {
+        dd = sol->rr[i] - rb[i];
+        err3d += dd * dd;
+    }
+    err3d = sqrt(err3d);
+
     trace(3,"outecef:\n");
     
-    p+=sprintf(p,"%s%s%14.4f%s%14.4f%s%14.4f%s%3d%s%3d%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%6.2f%s%6.1f\n",
+    /*p+=sprintf(p,"%s%s%14.4f%s%14.4f%s%14.4f%s%3d%s%3d%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%6.2f%s%6.1f\n",
                s,sep,sol->rr[0],sep,sol->rr[1],sep,sol->rr[2],sep,sol->stat,sep,
                sol->ns,sep,SQRT(sol->qr[0]),sep,SQRT(sol->qr[1]),sep,SQRT(sol->qr[2]),
                sep,sqvar(sol->qr[3]),sep,sqvar(sol->qr[4]),sep,sqvar(sol->qr[5]),
-               sep,sol->age,sep,sol->ratio);
+               sep,sol->age,sep,sol->ratio);*/
+
+    p+=sprintf(p,"%s%s%14.4f%s%14.4f%s%14.4f%s%3d%s%3d%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%8.4f%s%6.2f%s%6.1f%s%14.4f\n",
+               s,sep,sol->rr[0],sep,sol->rr[1],sep,sol->rr[2],sep,sol->stat,sep,
+               sol->ns,sep,SQRT(sol->qr[0]),sep,SQRT(sol->qr[1]),sep,SQRT(sol->qr[2]),
+               sep,sqvar(sol->qr[3]),sep,sqvar(sol->qr[4]),sep,sqvar(sol->qr[5]),
+               sep,sol->age,sep,sol->ratio,sep,err3d);
+
     return p-(char *)buff;
 }
 /* output solution as the form of lat/lon/height -----------------------------*/
@@ -1434,7 +1450,7 @@ extern int outsols(unsigned char *buff, const sol_t *sol, const double *rb,
     }
     switch (opt->posf) {
         case SOLF_LLH:  p+=outpos (p,s,sol,opt);   break;
-        case SOLF_XYZ:  p+=outecef(p,s,sol,opt);   break;
+        case SOLF_XYZ:  p+=outecef(p,s,sol,rb,opt);   break;
         case SOLF_ENU:  p+=outenu(p,s,sol,rb,opt); break;
         case SOLF_NMEA: p+=outnmea_rmc(p,sol);
                         p+=outnmea_gga(p,sol); break;
