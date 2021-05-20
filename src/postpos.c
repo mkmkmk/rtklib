@@ -312,6 +312,146 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
     }
     return n;
 }
+
+
+#define MAX_CSV_OBS (8)
+
+
+void printdiffcsv(FILE *diffCsv, FILE *resCsv, rtk_t *rtk)
+{
+    sol_t sol={{0}};
+    double rb[3]={0};
+    ssat_t *ssat;
+
+    int i,n;
+    int week;
+    double gpst;
+    double err3d, dd;
+    double resp, resc, max_abs_resp, max_abs_resc;
+
+    sol = rtk->sol;
+    for (i = 0; i < 3; i++)
+        rb[i] = rtk->rb[i];
+
+    err3d = 0;
+    for (i = 0; i < 3; i++)
+    {
+        dd = sol.rr[i] - rb[i];
+        err3d += dd * dd;
+    }
+    err3d = sqrt(err3d);
+
+    gpst = time2gpst(rtk->sol.time, &week);
+
+    max_abs_resp = 0;
+    max_abs_resc = 0;
+    fprintf(resCsv, "%.12g", gpst);
+    n = 0;
+    for (i = 0; i < MAXSAT; i++)
+    {
+        ssat = rtk->ssat + i;
+        if (!ssat->vs)
+            continue;
+
+        resp = ssat->resp[0];
+        if (fabs(resp) > fabs(max_abs_resp))
+            max_abs_resp = resp;
+        resc = ssat->resc[0];
+        if (fabs(resc) > fabs(max_abs_resc))
+            max_abs_resc = resc;
+        if (n++ < MAX_CSV_OBS)
+            fprintf(resCsv, "; %g; %g", resp, resc);
+    }
+    fprintf(resCsv,"\n");
+
+    /*fprintf(diffCsv, "%.12g; %g; %g; %g; %g; %g\n", gpst, err3d, error_LLH_m, d_ls_pvt->get_gdop(), max_abs_resp, max_abs_resc);*/
+    fprintf(diffCsv, "%.12g; %g; %g; %g\n", gpst, err3d, max_abs_resp, max_abs_resc);
+
+}
+
+int start_obs_csv(const char *path, FILE **fcsv_ch, int chan_num)
+{
+    char strBuf[1000];
+    int i;
+
+    printf("Out files:\n");
+    for (i = 0; i < chan_num; ++i)
+    {
+        sprintf(strBuf, "%s_ch%d.csv", path, i);
+        printf("  %s\n", strBuf);
+
+        fcsv_ch[i] = fopen(strBuf, "wb");
+        if (fcsv_ch[i] == NULL)
+        {
+            printf("write file open error\n");
+            return 1;
+        }
+        fprintf(fcsv_ch[i], "rx_time; p-rng_ch%d; phase_cyc_ch%d; prn_ch%d; doppler; t-time; dopp(carr); dopp(range); bias(Hz)\n", i, i, i);
+
+    }
+    printf("--\n");
+    return 0;
+}
+
+void close_obs_csv(FILE **fcsv_ch, int chan_num)
+{
+    int i;
+    for (i = 0; i < chan_num; ++i)
+    {
+         fclose(fcsv_ch[i]);
+         fcsv_ch[i] = 0;
+    }
+}
+
+#define SPEED_OF_LIGHT_M_S (299792458.0)        /* Speed of light in vacuum [m/s] */
+#define LAMBDA_L1 ( SPEED_OF_LIGHT_M_S / 1540 / 1023000)
+
+void write_obs_csv(FILE *fcsv, const obsd_t *o, double *prev_tm, double *prev_carr, double *prev_range)
+{
+    double ttime, carr, range;
+
+    int week;
+    double txtime, tm_dt, carr_f, range_f;
+
+    txtime = time2gpst(o->time, &week);
+
+
+    tm_dt = txtime - *prev_tm;
+    carr_f = 0;
+    range_f = 0;
+
+    carr = o->L[0];
+    range = o->P[0];
+    ttime = o->P[0] / SPEED_OF_LIGHT_M_S;
+
+    if(tm_dt >= 0.001)
+    {
+        carr_f = -(carr - *prev_carr) / tm_dt;
+        range_f = -(range - *prev_range) / tm_dt / LAMBDA_L1;
+    }
+    else
+        tm_dt = 0.001;
+
+    fprintf(
+            fcsv,
+            "%.15g; %.12g; %.20g; %d; %g; %.15g; %g; %g; %g\n",
+            txtime,
+            o->P[0],
+            carr,
+            o->sat,
+            o->D[0],
+            ttime,
+            carr_f,
+            range_f,
+            carr_f - range_f
+        );
+    *prev_carr = carr;
+    *prev_range = range;
+    *prev_tm = txtime;
+}
+
+
+
 /* process positioning -------------------------------------------------------*/
 static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
                     int mode)
@@ -322,12 +462,31 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
     obsd_t obs[MAXOBS*2]; /* for rover and base */
     double rb[3]={0};
     int i,nobs,n,solstatic,pri[]={0,1,2,3,4,5,1,6};
+
+    FILE *diffCsv;
+    FILE *resCsv;
+    FILE *fcsv_ch[MAX_CSV_OBS];
+    double prev_csv_carr[MAX_CSV_OBS];
+    double prev_csv_range[MAX_CSV_OBS];
+    double prev_csv_tm[MAX_CSV_OBS];
     
     trace(3,"procpos : mode=%d\n",mode);
     
     solstatic=sopt->solstatic&&
               (popt->mode==PMODE_STATIC||popt->mode==PMODE_PPP_STATIC);
     
+    diffCsv = fopen(".diff.csv", "w");
+    fprintf(diffCsv, "time; diff_3D [m]; max_abs_resp[m]; max_abs_resc[m]\n");
+
+    start_obs_csv("obs", fcsv_ch, MAX_CSV_OBS);
+
+    resCsv = fopen(".res.csv", "w");
+    fprintf(resCsv, "time");
+    for (i = 0; i < MAX_CSV_OBS; i++)
+        fprintf(resCsv, "; resRng%d; resCarr%d", i, i);
+    fprintf(resCsv, "\n");
+
+
     rtkinit(&rtk,popt);
     rtcm_path[0]='\0';
     
@@ -340,6 +499,13 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
         }
         if (n<=0) continue;
         
+        for (i = 0; i < n; i++)
+        {
+            if (i >= MAX_CSV_OBS)
+                break;
+            write_obs_csv(fcsv_ch[i], obs +i, prev_csv_tm + i, prev_csv_carr + i, prev_csv_range + i);
+        }
+
         if (!rtkpos(&rtk,obs,n,&navs)) continue;
         
         if (mode==0) { /* forward/backward */
@@ -366,12 +532,20 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
             for (i=0;i<3;i++) rbb[i+isolb*3]=rtk.rb[i];
             isolb++;
         }
+
+        printdiffcsv(diffCsv, resCsv, &rtk);
+
     }
     if (mode==0&&solstatic&&time.time!=0.0) {
         sol.time=time;
         outsol(fp,&sol,rb,sopt);
     }
     rtkfree(&rtk);
+    close_obs_csv(fcsv_ch, MAX_CSV_OBS);
+    fclose(diffCsv);
+    diffCsv = 0;
+    fclose(resCsv);
+    resCsv = 0;
 }
 /* validation of combined solutions ------------------------------------------*/
 static int valcomb(const sol_t *solf, const sol_t *solb)
