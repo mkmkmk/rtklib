@@ -317,6 +317,24 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
 #define MAX_CSV_OBS (8)
 
 
+double great_circle_distance(double lat1, double lon1, double lat2, double lon2)
+{
+    /* The Haversine formula determines the great-circle distance between two points on a sphere given their longitudes and latitudes.
+     * generally used geo measurement function
+     */
+    double R, dLat, dLon, a, c, d;
+    R = 6378.137;  /* Radius of earth in KM*/
+    dLat = lat2 - lat1;
+    dLon = lon2 - lon1;
+    a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+        cos(lat1) * cos(lat2) *
+               sin(dLon / 2) * sin(dLon / 2.0);
+    c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
+    d = R * c;
+    return d * 1000.0;  /* meters */
+}
+
+
 void printdiffcsv(FILE *diffCsv, FILE *resCsv, rtk_t *rtk)
 {
     sol_t sol={{0}};
@@ -326,12 +344,17 @@ void printdiffcsv(FILE *diffCsv, FILE *resCsv, rtk_t *rtk)
     int i,n;
     int week;
     double gpst;
-    double err3d, dd;
+    double err3d, dd, err2d;
     double resp, resc, max_abs_resp, max_abs_resc;
+    double pos[3] = {0}, refpos[3] = {0};
 
     sol = rtk->sol;
     for (i = 0; i < 3; i++)
         rb[i] = rtk->rb[i];
+
+    ecef2pos(sol.rr, pos);
+    ecef2pos(rb, refpos);
+    err2d = great_circle_distance(pos[0], pos[1], refpos[0], refpos[1]);
 
     err3d = 0;
     for (i = 0; i < 3; i++)
@@ -365,7 +388,7 @@ void printdiffcsv(FILE *diffCsv, FILE *resCsv, rtk_t *rtk)
     fprintf(resCsv,"\n");
 
     /*fprintf(diffCsv, "%.12g; %g; %g; %g; %g; %g\n", gpst, err3d, error_LLH_m, d_ls_pvt->get_gdop(), max_abs_resp, max_abs_resc);*/
-    fprintf(diffCsv, "%.12g; %g; %g; %g\n", gpst, err3d, max_abs_resp, max_abs_resc);
+    fprintf(diffCsv, "%.12g; %g; %g; %g; %g\n", gpst, err2d, err3d, max_abs_resp, max_abs_resc);
 
 }
 
@@ -476,7 +499,7 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
               (popt->mode==PMODE_STATIC||popt->mode==PMODE_PPP_STATIC);
     
     diffCsv = fopen(".diff.csv", "w");
-    fprintf(diffCsv, "time; diff_3D [m]; max_abs_resp[m]; max_abs_resc[m]\n");
+    fprintf(diffCsv, "time; diff_2D [m]; diff_3D [m]; max_abs_resp[m]; max_abs_resc[m]\n");
 
     start_obs_csv("obs", fcsv_ch, MAX_CSV_OBS);
 
