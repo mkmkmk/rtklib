@@ -412,11 +412,11 @@ void close_obs_csv(FILE **fcsv_ch, int chan_num)
     }
 }
 
-#define SPEED_OF_LIGHT_M_S (299792458.0)        /* Speed of light in vacuum [m/s] */
-#define LAMBDA_L1 ( SPEED_OF_LIGHT_M_S / 1540 / 1023000)
 
-void write_obs_csv(FILE *fcsv, const obsd_t *o, double *prev_tm, double *prev_carr, double *prev_range)
+void write_obs_csv(FILE *fcsv, rtk_t *rtk, const obsd_t *o, double *prev_tm, double *prev_carr, double *prev_range)
 {
+    const double *lam=navs.lam[o->sat-1];
+
     double ttime, carr, range;
 
     int week;
@@ -431,12 +431,12 @@ void write_obs_csv(FILE *fcsv, const obsd_t *o, double *prev_tm, double *prev_ca
 
     carr = o->L[0];
     range = o->P[0];
-    ttime = o->P[0] / SPEED_OF_LIGHT_M_S;
+    ttime = o->P[0] / CLIGHT;
 
     if(tm_dt >= 0.001)
     {
         carr_f = -(carr - *prev_carr) / tm_dt;
-        range_f = -(range - *prev_range) / tm_dt / LAMBDA_L1;
+        range_f = -(range - *prev_range) / tm_dt / lam[0];
     }
     else
         tm_dt = 0.001;
@@ -512,7 +512,7 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
         {
             if (i >= MAX_CSV_OBS)
                 break;
-            write_obs_csv(fcsv_ch[i], obs +i, prev_csv_tm + i, prev_csv_carr + i, prev_csv_range + i);
+            write_obs_csv(fcsv_ch[i], &rtk, obs +i, prev_csv_tm + i, prev_csv_carr + i, prev_csv_range + i);
         }
 
         if (!rtkpos(&rtk,obs,n,&navs)) continue;
