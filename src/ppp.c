@@ -567,7 +567,7 @@ static int corr_ion(gtime_t time, const nav_t *nav, int sat, const double *pos,
     return 1;
 }
 /* ionosphere and antenna corrected measurements -----------------------------*/
-static int corrmeas(const obsd_t *obs, const nav_t *nav, const double *pos,
+/*static*/ int corrmeas(const obsd_t *obs, const nav_t *nav, const double *pos,
                     const double *azel, const prcopt_t *opt,
                     const double *dantr, const double *dants, double phw,
                     double *meas, double *var, int *brk)

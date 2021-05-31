@@ -378,6 +378,8 @@ void printdiffcsv(FILE *diffCsv, FILE *resCsv, rtk_t *rtk)
 
 }
 
+#define PRINT_BIAS_OFS (0)
+
 int start_obs_csv(const char *path, FILE **fcsv_ch, int chan_num)
 {
     char strBuf[1000];
@@ -395,7 +397,7 @@ int start_obs_csv(const char *path, FILE **fcsv_ch, int chan_num)
             printf("write file open error\n");
             return 1;
         }
-        fprintf(fcsv_ch[i], "rx_time; p-rng_ch%d; phase_cyc_ch%d; prn_ch%d; doppler; t-time; dopp(carr); dopp(range); bias(Hz)\n", i, i, i);
+        fprintf(fcsv_ch[i], "rx_time; p-rng_ch%d; phase_cyc_ch%d; prn_ch%d; doppler; t-time; dopp(carr); dopp(range); bias(Hz) %s\n", i, i, i, PRINT_BIAS_OFS ? "; bias-ofs[m]" : "");
 
     }
     printf("--\n");
@@ -412,6 +414,12 @@ void close_obs_csv(FILE **fcsv_ch, int chan_num)
     }
 }
 
+/* from ppp.c */
+#define NP(opt)     ((opt)->dynamics?9:3) /* number of pos solution */
+#define IC(s,opt)   (NP(opt)+(s))      /* state index of clocks (s=0:gps,1:glo) */
+#define IT(opt)     (IC(0,opt)+NSYS)   /* state index of tropos */
+#define NR(opt)     (IT(opt)+((opt)->tropopt<TROPOPT_EST?0:((opt)->tropopt==TROPOPT_EST?1:3)))
+#define IB(s,opt)   (NR(opt)+(s)-1)    /* state index of phase bias */
 
 void write_obs_csv(FILE *fcsv, rtk_t *rtk, const obsd_t *o, double *prev_tm, double *prev_carr, double *prev_range)
 {
@@ -421,6 +429,10 @@ void write_obs_csv(FILE *fcsv, rtk_t *rtk, const obsd_t *o, double *prev_tm, dou
 
     int week;
     double txtime, tm_dt, carr_f, range_f;
+
+    double meas[2]={0}, var[2]={0},pos[3]={0};
+    int brk=0;
+    double bias_ofs = 0;
 
     txtime = time2gpst(o->time, &week);
 
@@ -441,25 +453,48 @@ void write_obs_csv(FILE *fcsv, rtk_t *rtk, const obsd_t *o, double *prev_tm, dou
     else
         tm_dt = 0.001;
 
-    fprintf(
-            fcsv,
-            "%.15g; %.12g; %.20g; %d; %g; %.15g; %g; %g; %g\n",
-            txtime,
-            o->P[0],
-            carr,
-            o->sat,
-            o->D[0],
-            ttime,
-            carr_f,
-            range_f,
-            carr_f - range_f
-        );
+    if (PRINT_BIAS_OFS)
+    {
+        ecef2pos(rtk->sol.rr,pos);
+        if (corrmeas(o,&navs,pos,rtk->ssat[o->sat-1].azel,&rtk->opt,NULL,NULL,0.0,meas,var,&brk))
+            bias_ofs = meas[0] - meas[1] - rtk->x[IB(o->sat,&rtk->opt)];
+
+        fprintf(
+                fcsv,
+                "%.15g; %.12g; %.20g; %d; %g; %.15g; %g; %g; %g; %.12g\n",
+                txtime,
+                o->P[0],
+                carr,
+                o->sat,
+                o->D[0],
+                ttime,
+                carr_f,
+                range_f,
+                carr_f - range_f,
+                bias_ofs
+            );
+    }
+    else
+    {
+        fprintf(
+                fcsv,
+                "%.15g; %.12g; %.20g; %d; %g; %.15g; %g; %g; %g\n",
+                txtime,
+                o->P[0],
+                carr,
+                o->sat,
+                o->D[0],
+                ttime,
+                carr_f,
+                range_f,
+                carr_f - range_f
+            );
+    }
+
     *prev_carr = carr;
     *prev_range = range;
     *prev_tm = txtime;
 }
-
-
 
 /* process positioning -------------------------------------------------------*/
 static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
