@@ -232,7 +232,7 @@ int read_binary_obs_qx(FILE *fobs, NavObservable *o, int *chan)
     return 1;
 }
 
-void printdiff(rtk_t *rtk)
+void printdiff(FILE *diffCsv, rtk_t *rtk)
 {
     sol_t sol={{0}};
     double rb[3]={0};
@@ -267,6 +267,7 @@ void printdiff(rtk_t *rtk)
 
     /*fprintf(diffCsv, "%.12g; %g; %g; %g; %g; %g\n", gpst, err3d, error_LLH_m, d_ls_pvt->get_gdop(), max_abs_resp, max_abs_resc);*/
     printf("%.12g; %g; %g\n", gpst, err2d, err3d);
+    fprintf(diffCsv, "%.12g; %g; %g\n", gpst, err2d, err3d);
 
 }
 
@@ -306,6 +307,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    FILE *diffCsv;
+    char diffPath[2000];
+    sprintf(diffPath, "%s%s", qxpath, ".diff.csv");
+    diffCsv = fopen(diffPath, "w");
+    fprintf(diffCsv, "time; diff_2D [m]; diff_3D [m]\n");
 
     gtime_t ts = {0}, te = {0};
     double ti = 0.0;
@@ -444,7 +450,7 @@ int main(int argc, char **argv)
             {
                 if (rtkpos(&rtk, obs, nobs, &navs))
                 {
-                    printdiff(&rtk);
+                    printdiff(diffCsv, &rtk);
                 }
             }
 
@@ -464,6 +470,9 @@ int main(int argc, char **argv)
     printf("EOF \n");
 
     printf("num_obs = %d\n", num_obs);
+
+    fclose(diffCsv);
+    diffCsv = 0;
 
     fclose(fqxobs);
     fqxobs = 0;
