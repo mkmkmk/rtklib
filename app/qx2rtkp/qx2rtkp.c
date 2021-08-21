@@ -38,14 +38,17 @@ static char proc_base[64]="";   /* base station for current processing */
 // Kobyłka ref v3 2021-05-01
 #define REF_POS {3642325.000, 1411093.342, 5025370.336}
 
+#define ELEVATION_MASK (6)
+#define NUM_BANDS (1)
 
 const prcopt_t prcopt_qx =    { /* defaults processing options */
-    //PMODE_STATIC,0,1,SYS_GPS,   /* mode,soltype,nf,navsys */
-    PMODE_PPP_STATIC,0,1,SYS_GPS,   /* mode,soltype,nf,navsys */
-    0.0*D2R,{{0,0}},            /* elmin,snrmask */
+    //PMODE_STATIC,0,NUM_BANDS,SYS_GPS,   /* mode,soltype,nf,navsys */
+    PMODE_PPP_STATIC,0,NUM_BANDS,SYS_GPS,   /* mode,soltype,nf,navsys */
+    ELEVATION_MASK*D2R,{{0,0}},            /* elmin,snrmask */
     0,1,1,1,                    /* sateph,modear,glomodear,bdsmodear */
     5,0,10,                     /* glomodear,maxout,minlock,minfix */
-    1,1,0,0,                    /* estion,esttrop,dynamics,tidecorr */
+    IONOOPT_BRDC,TROPOPT_SAAS,0,0,     /* estion,esttrop,dynamics,tidecorr */
+    //IONOOPT_IFLC,TROPOPT_SAAS,0,0,
     1,0,1,0,0,                  /* niter,codesmooth,intpref,sbascorr,sbassatsel */
     0,0,                        /* rovpos,refpos */
     {100.0,100.0},              /* eratio[] */
