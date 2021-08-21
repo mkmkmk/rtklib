@@ -352,7 +352,6 @@ int main(int argc, char **argv)
     rtk_t rtk;
     rtkinit(&rtk, popt);
 
-
     NavObservable obs_row[MAX_CHAN];
 
     for (int i = 0; i < MAX_CHAN; ++i)
@@ -407,35 +406,47 @@ int main(int argc, char **argv)
                 if (!obs_row[i].valid)
                     continue;
 
-                int prn = obs_row[i].prn;
+                int sat = obs_row[i].prn;
                 int sec = 0;
-                if (prn & 0x80)
+                if (sat & 0x80)
                 {
                     sec = 1;
-                    prn -= 0x80;
+                    sat -= 0x80;
                 }
+                if (isGalileo)
+                    sat += NSATGPS + NSATGLO;
 
-                // na razie kanały 2go pasma nie są używane
-                if (sec)
+                if (0 && sec)
                     continue;
 
                 int band = sec ? 2 : 0;
-                // tj. w rtklib_conversions.cc
 
-                obs[nobs].D[band] = obs_row[i].carrier_Doppler_hz;
-                obs[nobs].P[band] = obs_row[i].pseudorange_m;
-                obs[nobs].L[band] = obs_row[i].carrier_phase_cyc;
+                int xobs = nobs;
+
+                // łaczenie obserwant tej samej PRN
+                for (int ii = 0; ii < nobs; ++ii)
+                {
+                    if (obs[ii].sat != sat)
+                        continue;
+                    xobs = ii;
+                    break;
+                }
+
+                // tj. w rtklib_conversions.cc
+                obs[xobs].D[band] = obs_row[i].carrier_Doppler_hz;
+                obs[xobs].P[band] = obs_row[i].pseudorange_m;
+                obs[xobs].L[band] = obs_row[i].carrier_phase_cyc;
 
                 switch (band)
                 {
                     case 0:
-                        obs[nobs].code[band] = (unsigned char) CODE_L1C;
+                        obs[xobs].code[band] = (unsigned char) CODE_L1C;
                         break;
                     case 1:
-                        obs[nobs].code[band] = (unsigned char) CODE_L2S;
+                        obs[xobs].code[band] = (unsigned char) CODE_L2S;
                         break;
                     case 2:
-                        obs[nobs].code[band] = (unsigned char) CODE_L5X;
+                        obs[xobs].code[band] = (unsigned char) CODE_L5X;
                         break;
                 }
 
@@ -445,22 +456,23 @@ int main(int argc, char **argv)
                 if (CN0_dB_Hz_est < 0.0)
                         CN0_dB_Hz_est = 0.0;
                 int CN0_dB_Hz = .5 + CN0_dB_Hz_est / 0.25;
-                obs[nobs].SNR[band] = CN0_dB_Hz;
+                obs[xobs].SNR[band] = CN0_dB_Hz;
 
                 // todo LLI
                 if (CN0_dB_Hz_est <= -0.001)
-                    obs[nobs].LLI[band] = 1;
+                    obs[xobs].LLI[band] = 1;
 
-                obs[nobs].sat = obs_row[i].prn;
-                if (isGalileo)
-                    obs[nobs].sat += NSATGPS + NSATGLO;
+                obs[xobs].sat = sat;
 
                 //todo week!
                 int week = navs.eph[0].week;
-                obs[nobs].time = gpst2time(week, obs_row[i].rx_tow);
-                obs[nobs].rcv = 1;
+                obs[xobs].time = gpst2time(week, obs_row[i].rx_tow);
+                if (obs_row[i].rx_tow < 18.0)
+                    obs[xobs].time = timeadd(obs[xobs].time, 604800);
 
-                nobs++;
+                obs[xobs].rcv = 1;
+                if (xobs == nobs)
+                    nobs++;
             }
 
             if (nobs > 0)
@@ -477,7 +489,6 @@ int main(int argc, char **argv)
         prev_rx_tow = obs.rx_tow;
         obs_row[ch] = obs;
         num_obs++;
-
 
     }
 
