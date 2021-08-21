@@ -960,7 +960,13 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
             
             for (k=0;k<3;k++) H[k+nx*nv]=-e[k];
             
-            if (sys!=SYS_GLO) {
+            // MK-MOD gdy Galileo, indeks korekcji czasu dla Galileo
+            if (sys == SYS_GAL)
+            {
+                v[nv] -= x[IC(2, opt)];
+                H[IC(2, opt) + nx * nv] = 1.0;
+            }
+            else if (sys != SYS_GLO){
                 v[nv]-=x[IC(0,opt)];
                 H[IC(0,opt)+nx*nv]=1.0;
             }
