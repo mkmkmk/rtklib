@@ -269,8 +269,8 @@ void printdiff(FILE *diffCsv, rtk_t *rtk)
     gpst = time2gpst(rtk->sol.time, &week);
 
     /*fprintf(diffCsv, "%.12g; %g; %g; %g; %g; %g\n", gpst, err3d, error_LLH_m, d_ls_pvt->get_gdop(), max_abs_resp, max_abs_resc);*/
-    printf("%.12g; %g; %g\n", gpst, err2d, err3d);
-    fprintf(diffCsv, "%.12g; %g; %g\n", gpst, err2d, err3d);
+    printf("%.12g; %g; %g\n", gpst, err3d, err2d);
+    fprintf(diffCsv, "%.12g; %g; %g\n", gpst, err3d, err2d);
 
 }
 
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
     char diffPath[2000];
     sprintf(diffPath, "%s%s", qxpath, ".diff.csv");
     diffCsv = fopen(diffPath, "w");
-    fprintf(diffCsv, "time; diff_2D [m]; diff_3D [m]\n");
+    fprintf(diffCsv, "time; diff_3D [m]; diff_2D [m]\n");
 
     gtime_t ts = {0}, te = {0};
     double ti = 0.0;
