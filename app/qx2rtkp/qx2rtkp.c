@@ -14,6 +14,8 @@
 
 #include "NavObservable.h"
 
+#define SAVE_TRACE (1)
+
 
 #define MAX_CHAN (256)
 
@@ -278,6 +280,13 @@ void printdiff(FILE *diffCsv, rtk_t *rtk)
 // [[Rcpp
 int main(int argc, char **argv)
 {
+
+    if (SAVE_TRACE)
+    {
+        traceopen("qx2rtkp.trace");
+        tracelevel(5);
+    }
+
     /*
         brdc1490.21n observables.qx 8
     */
@@ -481,6 +490,9 @@ int main(int argc, char **argv)
     fqxobs = 0;
 
     printf("DONE\n");
+
+    if (SAVE_TRACE)
+        traceclose();
 
     return 0;
 
