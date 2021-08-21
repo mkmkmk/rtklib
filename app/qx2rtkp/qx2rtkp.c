@@ -312,6 +312,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    int isGalileo = 0;
+    if (argc >= 5)
+        isGalileo = atoi(argv[4]) != 0;
+    printf("isGalileo = %d\n", isGalileo);
+
     FILE *fqxobs = fopen(qxpath, "rb");
     if (fqxobs == NULL)
     {
@@ -331,6 +336,9 @@ int main(int argc, char **argv)
 
     prcopt_t opt = prcopt_qx;
     prcopt_t *popt = &opt;
+
+    if (isGalileo)
+        popt->navsys = SYS_GAL;
 
     char *infile[1] = { brdcpath };
 
@@ -352,14 +360,10 @@ int main(int argc, char **argv)
 
     NavObservable obs;
 
-
     int ch;
     int num_obs = 0;
 
     double prev_rx_tow =0;
-
-    int band = 0;
-    int isGalileo = 0;
 
     while (read_binary_obs_qx(fqxobs, &obs, &ch))
     {
@@ -415,6 +419,7 @@ int main(int argc, char **argv)
                 if (sec)
                     continue;
 
+                int band = sec ? 2 : 0;
                 // tj. w rtklib_conversions.cc
 
                 obs[nobs].D[band] = obs_row[i].carrier_Doppler_hz;
