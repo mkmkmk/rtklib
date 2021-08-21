@@ -30,8 +30,13 @@ static char proc_rov [64]="";   /* rover for current processing */
 static char proc_base[64]="";   /* base station for current processing */
 
 
-//#define REF_POS {4849202.3940,-360328.9929,4114913.1862}
-#define REF_POS {3642332.408, 1411096.212, 5025380.626}
+// #define REF_POS {4849202.3940,-360328.9929,4114913.1862}
+
+// Kobyłka ref v2 2019-06-03
+// #define REF_POS {3642332.408, 1411096.212, 5025380.626}
+
+// Kobyłka ref v3 2021-05-01
+#define REF_POS {3642325.000, 1411093.342, 5025370.336}
 
 
 const prcopt_t prcopt_qx =    { /* defaults processing options */
