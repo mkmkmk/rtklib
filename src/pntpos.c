@@ -289,7 +289,11 @@ static int valsol(const double *azel, const int *vsat, int n,
     vv=dot(v,v,nv);
     if (nv>nx&&vv>chisqr[nv-nx-1]) {
         sprintf(msg,"chi-square error nv=%d vv=%.1f cs=%.1f",nv,vv,chisqr[nv-nx-1]);
-        return 0;
+        printf("chi-square error nv=%d vv=%.1f cs=%.1f \n",nv,vv,chisqr[nv-nx-1]);
+        if (0)
+            printf("--> validation DISABLED \n");
+        else
+            return 0;
     }
     /* large gdop check */
     for (i=ns=0;i<n;i++) {
