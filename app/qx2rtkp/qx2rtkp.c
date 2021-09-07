@@ -299,6 +299,8 @@ int main(int argc, char **argv)
         brdc1490.21n observables.qx 8
     */
 
+    printf("qx2rtkp2 (RTKLIB 2.4.2)\n");
+
     if(argc < 4)
     {
         printf("args: brdc-path qx-path chan-num\n");
