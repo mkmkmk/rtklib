@@ -67,7 +67,7 @@ static double prange(const obsd_t *obs, const nav_t *nav, const double *azel,
     if (!(sys=satsys(obs->sat,NULL))) return 0.0;
     
     /* L1-L2 for GPS/GLO/QZS, L1-L5 for GAL/SBS */
-    if (NFREQ>=3&&(sys&(SYS_GAL|SYS_SBS))) j=2;
+    if (NFREQ>=3&&(sys&(SYS_GAL|SYS_SBS))&&!GAL_AS_GPS_L1L2) j=2;
     
     if (NFREQ<2||lam[i]==0.0||lam[j]==0.0) return 0.0;
     
@@ -254,7 +254,7 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         
         /* time system and receiver bias offset correction */
         if      (sys==SYS_GLO) {v[nv]-=x[4]; H[4+nv*NX]=1.0; mask[1]=1;}
-        else if (sys==SYS_GAL) {v[nv]-=x[5]; H[5+nv*NX]=1.0; mask[2]=1;}
+        else if (sys==SYS_GAL && !GAL_AS_GPS_L1L2) {v[nv]-=x[5]; H[5+nv*NX]=1.0; mask[2]=1;}
         else if (sys==SYS_CMP) {v[nv]-=x[6]; H[6+nv*NX]=1.0; mask[3]=1;}
         else mask[0]=1;
         

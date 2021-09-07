@@ -3,6 +3,9 @@ PROGNAME = qx2rtkp
 LIBSRC = ../../src
 OPTS    = -DTRACE -DENAGLO -DENAQZS -DENAGAL -DNFREQ=3
 
+# GALIELO AS GPS + L5 AS L2
+OPTS+= -DGAL_AS_GPS_L1L2=0
+
 CC = gcc
 LD = gcc
 

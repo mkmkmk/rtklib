@@ -325,6 +325,9 @@ int main(int argc, char **argv)
         isGalileo = atoi(argv[4]) != 0;
     printf("isGalileo = %d\n", isGalileo);
 
+    if (isGalileo)
+        printf("GAL_AS_GPS_L1L2 = %d\n", GAL_AS_GPS_L1L2);
+
     FILE *fqxobs = fopen(qxpath, "rb");
     if (fqxobs == NULL)
     {
@@ -428,6 +431,8 @@ int main(int argc, char **argv)
                     continue;
 
                 int band = sec ? 2 : 0;
+                if (GAL_AS_GPS_L1L2)
+                    band = sec;
 
                 int xobs = nobs;
 

@@ -424,7 +424,7 @@ static double varerr(int sat, int sys, double el, int type, const prcopt_t *opt)
 {
     double a,b,a2,b2,fact=1.0;
     double sinel=sin(el);
-    int i=sys==SYS_GLO?1:(sys==SYS_GAL?2:0);
+    int i=sys==SYS_GLO?1:(sys==(SYS_GAL&&!GAL_AS_GPS_L1L2)?2:0);
     
     /* extended error model */
     if (type==1&&opt->exterr.ena[0]) { /* code */
@@ -477,7 +477,7 @@ static int ifmeas(const obsd_t *obs, const nav_t *nav, const double *azel,
     trace(4,"ifmeas  :\n");
     
     /* L1-L2 for GPS/GLO/QZS, L1-L5 for GAL/SBS */
-    if (NFREQ>=3&&(satsys(obs->sat,NULL)&(SYS_GAL|SYS_SBS))) j=2;
+    if (NFREQ>=3&&(satsys(obs->sat,NULL)&(SYS_GAL|SYS_SBS))&&!GAL_AS_GPS_L1L2) j=2;
     
     if (NFREQ<2||lam[i]==0.0||lam[j]==0.0) return 0;
     
@@ -595,7 +595,7 @@ static int corr_ion(gtime_t time, const nav_t *nav, int sat, const double *pos,
     gamma=SQR(lam[1]/lam[0]); /* f1^2/f2^2 */
     P1_P2=nav->cbias[obs->sat-1][0];
     P1_C1=nav->cbias[obs->sat-1][1];
-    if (P1_P2==0.0&&(satsys(obs->sat,NULL)&(SYS_GPS|SYS_GAL|SYS_QZS))) {
+    if (P1_P2==0.0&&(satsys(obs->sat,NULL)&(SYS_GPS|SYS_GAL|SYS_QZS))&&!GAL_AS_GPS_L1L2) {
         P1_P2=(1.0-gamma)*gettgd(obs->sat,nav);
     }
     if (obs->code[0]==CODE_L1C) P1+=P1_C1; /* C1->P1 */
@@ -960,8 +960,8 @@ static int res_ppp(int iter, const obsd_t *obs, int n, const double *rs,
             
             for (k=0;k<3;k++) H[k+nx*nv]=-e[k];
             
-            // MK-MOD gdy Galileo, indeks korekcji czasu dla Galileo
-            if (sys == SYS_GAL)
+            /* MK-MOD gdy Galileo, indeks korekcji czasu dla Galileo */
+            if (sys == SYS_GAL && !GAL_AS_GPS_L1L2)
             {
                 v[nv] -= x[IC(2, opt)];
                 H[IC(2, opt) + nx * nv] = 1.0;

@@ -46,6 +46,10 @@ extern "C" {
 
 /* constants -----------------------------------------------------------------*/
 
+#ifndef GAL_AS_GPS_L1L2
+#define GAL_AS_GPS_L1L2 (0)
+#endif
+
 #define VER_RTKLIB  "2.4.2"             /* library version */
 
 #define PATCH_LEVEL "p13"               /* patch level */
@@ -71,7 +75,8 @@ extern "C" {
 #define MAXFREQ     7                   /* max NFREQ */
 
 #define FREQ1       1.57542E9           /* L1/E1  frequency (Hz) */
-#define FREQ2       1.22760E9           /* L2     frequency (Hz) */
+/*#define FREQ2       1.22760E9       */    /* L2     frequency (Hz) */
+#define FREQ2       (!GAL_AS_GPS_L1L2?1.22760E9:FREQ5)
 #define FREQ5       1.17645E9           /* L5/E5a frequency (Hz) */
 #define FREQ6       1.27875E9           /* E6/LEX frequency (Hz) */
 #define FREQ7       1.20714E9           /* E5b    frequency (Hz) */

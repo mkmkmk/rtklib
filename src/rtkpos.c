@@ -369,7 +369,7 @@ static double varerr(int sat, int sys, double el, double bl, double dt, int f,
 {
     double a,b,c=opt->err[3]*bl/1E4,d=CLIGHT*opt->sclkstab*dt,fact=1.0;
     double sinel=sin(el);
-    int i=sys==SYS_GLO?1:(sys==SYS_GAL?2:0),nf=NF(opt);
+    int i=sys==SYS_GLO?1:(sys==(SYS_GAL&&!GAL_AS_GPS_L1L2)?2:0),nf=NF(opt);
     
     /* extended error model */
     if (f>=nf&&opt->exterr.ena[0]) { /* code */
