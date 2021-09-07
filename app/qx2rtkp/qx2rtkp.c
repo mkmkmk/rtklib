@@ -411,8 +411,9 @@ int main(int argc, char **argv)
                 printf("\n");
             }
 
-            obsd_t obs[MAXOBS * 2];
             int nobs = 0;
+            obsd_t obs[MAXOBS * 2];
+            memset(obs, 0, sizeof(obs));
 
             for (int i = 0; i < chan_num; ++i)
             {
