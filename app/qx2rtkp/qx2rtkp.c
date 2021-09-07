@@ -16,6 +16,9 @@
 
 #define SAVE_TRACE (1)
 
+// temp powrót do TOW w Q.30
+#define OLD_OBSO_Q30_TOW (0)
+
 
 #define MAX_CHAN (256)
 
@@ -193,7 +196,12 @@ int read_binary_obs_qx(FILE *fobs, NavObservable *o, int *chan)
     if (fread(&tmp, sizeof(tmp), 1, fobs) != 1)
         return 0;
 
-    o->rx_tow = tmp / Q_32_dbl;
+#if OLD_OBSO_Q30_TOW
+#warning OLD_OBSO_Q30_TOW
+        o->rx_tow = tmp / Q_30_dbl;
+#else
+        o->rx_tow = tmp / Q_32_dbl;
+#endif
 
     o->tow = 0;
     o->carrier_Doppler_hz = 0;
